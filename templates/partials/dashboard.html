@@ -1,0 +1,87 @@
+<!-- Dashboard partial - Top cryptos grid -->
+<div class="space-y-4">
+    <!-- Trending -->
+    {% if trending %}
+    <div class="mb-4">
+        <h3 class="text-sm font-semibold text-gray-500 mb-2">🔥 Trending</h3>
+        <div class="flex gap-2 flex-wrap">
+            {% for coin in trending %}
+            <button 
+                class="px-3 py-1 bg-spark/20 text-gray-800 rounded-full text-sm hover:bg-spark/40 transition flex items-center gap-1"
+                hx-get="/crypto-detail/{{ coin.id }}?t={{ range(1,1000) | random }}"
+                hx-target="#crypto-detail">
+                {% if coin.thumb %}<img src="{{ coin.thumb }}" class="w-4 h-4 rounded-full">{% endif %}
+                {{ coin.symbol }}
+            </button>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Crypto Table -->
+    <div class="overflow-x-auto">
+        <table class="w-full">
+            <thead class="bg-gray-50">
+                <tr>
+                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">#</th>
+                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Coin</th>
+                    <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Price</th>
+                    <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">24h %</th>
+                    <th class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Market Cap</th>
+                    <th class="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">Action</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-100">
+                {% for crypto in cryptos %}
+                <tr class="hover:bg-gray-50 transition cursor-pointer"
+                    hx-get="/crypto/{{ crypto.id }}"
+                    hx-target="#crypto-detail"
+                    hx-indicator=".htmx-indicator">
+                    <td class="px-4 py-3 text-sm text-gray-500">{{ loop.index }}</td>
+                    <td class="px-4 py-3">
+                        <div class="flex items-center gap-3">
+                            {% if crypto.image %}
+                            <img src="{{ crypto.image }}" alt="{{ crypto.name }}" class="w-8 h-8 rounded-full">
+                            {% endif %}
+                            <div>
+                                <div class="font-semibold text-gray-800">{{ crypto.name }}</div>
+                                <div class="text-sm text-gray-500">{{ crypto.symbol }}</div>
+                            </div>
+                        </div>
+                    </td>
+                    <td class="px-4 py-3 text-right font-mono text-gray-800">
+                        ${{ "{:,.2f}".format(crypto.current_price) if crypto.current_price < 1000 else "{:,.0f}".format(crypto.current_price) }}
+                    </td>
+                    <td class="px-4 py-3 text-right">
+                        <span class="px-2 py-1 rounded-full text-sm font-medium
+                            {% if crypto.price_change_percentage_24h > 0 %}
+                                bg-green-100 text-green-800
+                            {% elif crypto.price_change_percentage_24h < 0 %}
+                                bg-red-100 text-red-800
+                            {% else %}
+                                bg-gray-100 text-gray-800
+                            {% endif %}">
+                            {% if crypto.price_change_percentage_24h > 0 %}+{% endif %}
+                            {{ "{:.2f}".format(crypto.price_change_percentage_24h) }}%
+                        </span>
+                    </td>
+                    <td class="px-4 py-3 text-right text-sm text-gray-600">
+                        {% if crypto.market_cap >= 1e12 %}
+                            ${{ "{:.2f}".format(crypto.market_cap / 1e12) }}T
+                        {% elif crypto.market_cap >= 1e9 %}
+                            ${{ "{:.2f}".format(crypto.market_cap / 1e9) }}B
+                        {% else %}
+                            ${{ "{:.2f}".format(crypto.market_cap / 1e6) }}M
+                        {% endif %}
+                    </td>
+                    <td class="px-4 py-3 text-center">
+                        <button class="text-walmart-blue hover:underline text-sm font-medium">
+                            Analyze →
+                        </button>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>

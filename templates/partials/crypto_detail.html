@@ -1,0 +1,232 @@
+<!-- Crypto Detail Partial - Full analysis view -->
+<div data-crypto-id="{{ crypto.id }}">
+    <!-- Header -->
+    <div class="flex items-center justify-between mb-6">
+        <div class="flex items-center gap-4">
+            {% if crypto.image %}
+            <img src="{{ crypto.image }}" alt="{{ crypto.name }}" class="w-12 h-12 rounded-full">
+            {% endif %}
+            <div>
+                <h2 class="text-2xl font-bold text-gray-800">{{ crypto.name }}</h2>
+                <span class="text-gray-500">{{ crypto.symbol }}</span>
+            </div>
+        </div>
+        <button onclick="document.getElementById('detail-panel').classList.add('hidden')" 
+                class="text-gray-400 hover:text-gray-600">
+            ✕ Close
+        </button>
+    </div>
+
+    <!-- Price Info -->
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+        <div class="bg-gray-50 rounded-lg p-4">
+            <div class="text-xs text-gray-500 uppercase">Current Price</div>
+            <div class="text-xl font-bold text-gray-800">${{ "{:,.2f}".format(crypto.current_price) }}</div>
+        </div>
+        <div class="bg-gray-50 rounded-lg p-4">
+            <div class="text-xs text-gray-500 uppercase">24h Change</div>
+            <div class="text-xl font-bold 
+                {% if crypto.price_change_percentage_24h > 0 %}text-green-600{% else %}text-red-600{% endif %}">
+                {% if crypto.price_change_percentage_24h > 0 %}+{% endif %}{{ "{:.2f}".format(crypto.price_change_percentage_24h) }}%
+            </div>
+        </div>
+        <div class="bg-gray-50 rounded-lg p-4">
+            <div class="text-xs text-gray-500 uppercase">24h High</div>
+            <div class="text-xl font-bold text-green-600">${{ "{:,.2f}".format(crypto.high_24h) }}</div>
+        </div>
+        <div class="bg-gray-50 rounded-lg p-4">
+            <div class="text-xs text-gray-500 uppercase">24h Low</div>
+            <div class="text-xl font-bold text-red-600">${{ "{:,.2f}".format(crypto.low_24h) }}</div>
+        </div>
+    </div>
+
+    <!-- AI Suggestion Banner -->
+    <div class="mb-6 p-4 rounded-lg border-2
+        {% if suggestion.recommendation.value in ['strong_buy', 'buy'] %}
+            bg-green-50 border-green-300
+        {% elif suggestion.recommendation.value in ['strong_sell', 'sell'] %}
+            bg-red-50 border-red-300
+        {% else %}
+            bg-gray-50 border-gray-300
+        {% endif %}">
+        <div class="flex items-center justify-between mb-2">
+            <div class="flex items-center gap-3">
+                <span class="text-3xl">
+                    {% if suggestion.recommendation.value == 'strong_buy' %}🚀
+                    {% elif suggestion.recommendation.value == 'buy' %}📈
+                    {% elif suggestion.recommendation.value == 'hold' %}⏸️
+                    {% elif suggestion.recommendation.value == 'sell' %}📉
+                    {% else %}⚠️{% endif %}
+                </span>
+                <div>
+                    <div class="text-sm text-gray-500">AI Recommendation</div>
+                    <div class="text-2xl font-bold uppercase
+                        {% if suggestion.recommendation.value in ['strong_buy', 'buy'] %}text-green-700
+                        {% elif suggestion.recommendation.value in ['strong_sell', 'sell'] %}text-red-700
+                        {% else %}text-gray-700{% endif %}">
+                        {{ suggestion.recommendation.value | replace('_', ' ') }}
+                    </div>
+                </div>
+            </div>
+            <div class="text-right">
+                <div class="text-sm text-gray-500">Confidence</div>
+                <div class="text-xl font-bold text-gray-800">{{ "{:.0f}".format(suggestion.confidence) }}%</div>
+            </div>
+        </div>
+        <p class="text-gray-700 text-sm">{{ suggestion.reasoning }}</p>
+        
+        <!-- Entry/Exit Points -->
+        <div class="grid grid-cols-3 gap-4 mt-4 pt-4 border-t border-gray-200">
+            <div>
+                <div class="text-xs text-gray-500">Entry Point</div>
+                <div class="font-bold text-gray-800">${{ "{:,.2f}".format(suggestion.entry_point) }}</div>
+            </div>
+            <div>
+                <div class="text-xs text-gray-500">Stop Loss</div>
+                <div class="font-bold text-red-600">${{ "{:,.2f}".format(suggestion.stop_loss) }}</div>
+            </div>
+            <div>
+                <div class="text-xs text-gray-500">Take Profit</div>
+                <div class="font-bold text-green-600">${{ "{:,.2f}".format(suggestion.take_profit) }}</div>
+            </div>
+        </div>
+
+        <!-- Risk Level -->
+        <div class="mt-4 flex items-center gap-4">
+            <span class="text-sm text-gray-500">Risk Level:</span>
+            <span class="px-3 py-1 rounded-full text-sm font-medium
+                {% if suggestion.risk_level == 'Low' %}bg-green-100 text-green-800
+                {% elif suggestion.risk_level == 'Medium' %}bg-yellow-100 text-yellow-800
+                {% elif suggestion.risk_level == 'High' %}bg-orange-100 text-orange-800
+                {% else %}bg-red-100 text-red-800{% endif %}">
+                {{ suggestion.risk_level }}
+            </span>
+            <span class="text-sm text-gray-500">| Time Horizon: {{ suggestion.time_horizon }}</span>
+        </div>
+    </div>
+
+    <!-- Technical Indicators -->
+    <div class="mb-6">
+        <h3 class="text-lg font-bold text-gray-800 mb-4">📊 Technical Indicators</h3>
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <!-- RSI -->
+            <div class="bg-gray-50 rounded-lg p-4">
+                <div class="text-xs text-gray-500 uppercase mb-1">RSI (14)</div>
+                <div class="text-xl font-bold 
+                    {% if indicators.rsi <= 30 %}text-green-600
+                    {% elif indicators.rsi >= 70 %}text-red-600
+                    {% else %}text-gray-800{% endif %}">
+                    {{ "{:.1f}".format(indicators.rsi) }}
+                </div>
+                <div class="text-xs text-gray-500">{{ indicators.rsi_signal }}</div>
+            </div>
+            
+            <!-- MACD -->
+            <div class="bg-gray-50 rounded-lg p-4">
+                <div class="text-xs text-gray-500 uppercase mb-1">MACD</div>
+                <div class="text-xl font-bold 
+                    {% if indicators.macd > indicators.macd_signal %}text-green-600{% else %}text-red-600{% endif %}">
+                    {{ "{:.4f}".format(indicators.macd) }}
+                </div>
+                <div class="text-xs text-gray-500">Signal: {{ "{:.4f}".format(indicators.macd_signal) }}</div>
+            </div>
+            
+            <!-- SMA -->
+            <div class="bg-gray-50 rounded-lg p-4">
+                <div class="text-xs text-gray-500 uppercase mb-1">SMA 20/50</div>
+                <div class="text-sm font-mono">
+                    <span class="text-green-600">${{ "{:.2f}".format(indicators.sma_20) }}</span>
+                    <span class="text-gray-400">/</span>
+                    <span class="text-blue-600">${{ "{:.2f}".format(indicators.sma_50) }}</span>
+                </div>
+                <div class="text-xs 
+                    {% if indicators.sma_20 > indicators.sma_50 %}text-green-600{% else %}text-red-600{% endif %}">
+                    {% if indicators.sma_20 > indicators.sma_50 %}Golden Cross{% else %}Death Cross{% endif %}
+                </div>
+            </div>
+            
+            <!-- Trend -->
+            <div class="bg-gray-50 rounded-lg p-4">
+                <div class="text-xs text-gray-500 uppercase mb-1">Trend</div>
+                <div class="text-xl font-bold capitalize
+                    {% if indicators.trend.value == 'bullish' %}text-green-600
+                    {% elif indicators.trend.value == 'bearish' %}text-red-600
+                    {% else %}text-gray-600{% endif %}">
+                    {{ indicators.trend.value }}
+                </div>
+                <div class="text-xs text-gray-500 capitalize">{{ indicators.trend_strength.value }} signal</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Trading Signals -->
+    <div class="mb-6">
+        <h3 class="text-lg font-bold text-gray-800 mb-4">🎯 Trading Signals</h3>
+        <div class="flex flex-wrap gap-2">
+            {% for signal in signals.signals %}
+            <div class="px-3 py-2 rounded-lg text-sm
+                {% if signal.type == 'buy' %}bg-green-100 text-green-800 border border-green-200
+                {% else %}bg-red-100 text-red-800 border border-red-200{% endif %}">
+                <span class="font-bold">{{ signal.source }}:</span> {{ signal.message }}
+            </div>
+            {% endfor %}
+        </div>
+        <div class="mt-4 p-3 bg-gray-100 rounded-lg">
+            <span class="text-gray-600">Overall Signal:</span>
+            <span class="font-bold ml-2 uppercase
+                {% if signals.overall == 'buy' %}text-green-600
+                {% elif signals.overall == 'sell' %}text-red-600
+                {% else %}text-gray-600{% endif %}">
+                {{ signals.overall }}
+            </span>
+            <span class="text-gray-500 ml-2">({{ signals.buy_count }} buy / {{ signals.sell_count }} sell signals)</span>
+        </div>
+    </div>
+
+    <!-- Price Chart -->
+    <div class="mb-6">
+        <h3 class="text-lg font-bold text-gray-800 mb-4">📈 30-Day Price Chart</h3>
+        <div style="height: 300px;">
+            <canvas id="priceChart"></canvas>
+        </div>
+    </div>
+
+    <!-- Disclaimer -->
+    <div class="mt-4 p-3 bg-yellow-50 border-l-4 border-yellow-400 text-sm text-yellow-800 rounded">
+    <span class="mr-1">⚠️</span>
+    Disclaimer: This tool is for educational purposes only. Not financial advice. Always do your own research before investing.
+    </div>
+</div>
+
+<script>
+    var canvas = document.getElementById('priceChart');
+    var prices = {{ prices | tojson }};
+
+    if (window.myChart) {
+        window.myChart.destroy();
+    }
+
+    var ctx = canvas.getContext('2d');
+
+    window.myChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: prices.map((_, i) => `Day ${i + 1}`),
+            datasets: [{
+                label: '{{ crypto.symbol }} Price',
+                data: prices,
+                borderColor: '#0053e2',
+                backgroundColor: 'rgba(0, 83, 226, 0.1)',
+                fill: true,
+                tension: 0.4
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { display: false }
+            }
+        }
+    });
+</script>

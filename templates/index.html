@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title> Crypto Trading Bot - AI Investment Advisor</title>
+    <script src="https://unpkg.com/htmx.org@1.9.10"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        /* Walmart-inspired theme colors */
+        :root {
+            --blue-100: #0053e2;
+            --spark-100: #ffc220;
+            --red-100: #ea1100;
+            --green-100: #2a8703;
+        }
+        .bg-walmart-blue { background-color: #0053e2; }
+        .text-walmart-blue { color: #0053e2; }
+        .border-walmart-blue { border-color: #0053e2; }
+        .bg-spark { background-color: #ffc220; }
+        .text-spark { color: #ffc220; }
+        .bg-success { background-color: #2a8703; }
+        .text-success { color: #2a8703; }
+        .bg-error { background-color: #ea1100; }
+        .text-error { color: #ea1100; }
+        
+        /* Loading spinner */
+        .htmx-request .htmx-indicator { display: inline-block; }
+        .htmx-indicator { display: none; }
+        
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+        .animate-pulse-fast { animation: pulse 1s ease-in-out infinite; }
+        
+        /* Scrollbar styling */
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #f1f1f1; }
+        ::-webkit-scrollbar-thumb { background: #0053e2; border-radius: 4px; }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen">
+    <!-- Header -->
+    <header class="bg-walmart-blue text-white shadow-lg sticky top-0 z-50">
+        <div class="container mx-auto px-4 py-4">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center gap-3">
+                    <span class="text-3xl">🐕</span>
+                    <div>
+                        <h1 class="text-2xl font-bold">Crypto Trading Bot</h1>
+                        <p class="text-blue-200 text-sm">AI-Powered Investment Suggestions</p>
+                    </div>
+                </div>
+                <div class="flex items-center gap-4">
+            <!-- Auth Section -->
+            {% if user %}
+            <div class="flex items-center gap-3 bg-white/10 px-3 py-1.5 rounded-lg">
+                <img src="{{ user.picture }}" class="w-8 h-8 rounded-full border-2 border-spark" alt="Profile" referrerpolicy="no-referrer">
+                <div class="hidden md:block">
+                    <div class="text-sm font-bold text-white leading-tight">{{ user.name }}</div>
+                    <a href="/logout" class="text-xs text-blue-200 hover:text-white underline">Logout</a>
+                </div>
+            </div>
+            {% else %}
+            <a href="/login/google" class="flex items-center gap-2 bg-white text-gray-800 px-4 py-2 rounded-lg shadow hover:bg-gray-50 transition font-medium text-sm">
+                <img src="https://developers.google.com/identity/images/g-logo.png" class="w-5 h-5" alt="Google">
+                Sign in
+            </a>
+            {% endif %}
+
+                    <!-- Search -->
+                    <div class="relative">
+                        <input type="text" 
+                               placeholder="Search coins..." 
+                               class="px-4 py-2 rounded-lg text-gray-800 w-64 focus:ring-2 focus:ring-spark"
+                               hx-get="/search"
+                               hx-trigger="keyup changed delay:750ms"
+                               hx-target="#search-results"
+                               name="q">
+                        <div id="search-results" class="absolute top-full mt-2 w-full bg-white rounded-lg shadow-xl hidden max-h-96 overflow-y-auto z-50 text-black border border-gray-100"></div>
+                    </div>
+                    <!-- Risk Tolerance -->
+                    <select id="risk-tolerance" 
+                            class="px-4 py-2 rounded-lg text-gray-800 focus:ring-2 focus:ring-spark"
+                            onchange="updateRiskTolerance(this.value)">
+                <option value="low" {% if prefs.risk_tolerance == 'low' %}selected{% endif %}>Low Risk</option>
+                <option value="medium" {% if prefs.risk_tolerance == 'medium' %}selected{% endif %}>Medium Risk</option>
+                <option value="high" {% if prefs.risk_tolerance == 'high' %}selected{% endif %}>High Risk</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <main class="container mx-auto px-4 py-6">
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <!-- Left Column: Disclaimer, Market Overview & Chat -->
+            <div class="lg:col-span-1 space-y-6 lg:sticky lg:top-24 self-start lg:max-h-[calc(100vh-7rem)] lg:overflow-y-auto lg:pr-2 pb-4">
+                <!-- Disclaimer Banner -->
+                <div class="bg-spark/20 border-l-4 border-spark text-gray-800 p-4 rounded-r-lg">
+                    <div class="flex items-center gap-2">
+                        <span class="text-2xl">⚠️</span>
+                        <div>
+                            <p class="font-bold">Not Financial Advice!</p>
+                            <p class="text-sm">This bot provides educational insights only. Crypto is volatile. DYOR and never invest more than you can afford to lose.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Market Overview -->
+                <div class="bg-white rounded-xl shadow-lg p-6">
+                    <h2 class="text-xl font-bold text-gray-800 mb-4 flex items-center gap-2">
+                        📊 Market Overview
+                        <span class="htmx-indicator">
+                            <svg class="animate-spin h-5 w-5 text-walmart-blue" fill="none" viewBox="0 0 24 24">
+                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                            </svg>
+                        </span>
+                    </h2>
+                    <div id="market-overview" 
+                         hx-get="/market-overview" 
+                         hx-trigger="load, every 60s"
+                         hx-indicator=".htmx-indicator">
+                        <div class="animate-pulse-fast text-gray-400">Loading market data...</div>
+                    </div>
+                </div>
+
+                <!-- AI Chat -->
+                <div class="bg-white rounded-xl shadow-lg p-6">
+                    <h2 class="text-xl font-bold text-gray-800 mb-4 flex items-center gap-2">
+                        🐕 Ask the Bot
+                    </h2>
+                    <div id="chat-messages" class="h-64 overflow-y-auto mb-4 space-y-3 p-2 bg-gray-50 rounded-lg">
+                        <div class="bg-walmart-blue text-white p-3 rounded-lg rounded-bl-none max-w-[85%]">
+                            Woof! I'm your crypto advisor! Ask me about any coin, market trends, or investment strategies. I only talk crypto! 🚀
+                        </div>
+                    </div>
+                    <form hx-post="/chat" 
+                          hx-target="#chat-messages" 
+                          hx-swap="beforeend"
+                          hx-on::after-request="this.reset(); document.getElementById('chat-messages').scrollTop = document.getElementById('chat-messages').scrollHeight">
+                        <div class="flex gap-2">
+                            <input type="text" 
+                                   name="message" 
+                                   placeholder="Ask about crypto..." 
+                                   class="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-walmart-blue focus:border-transparent"
+                                   required>
+                            <button type="submit" 
+                                    class="bg-walmart-blue text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition">
+                                Send
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Right Column: Dashboard & Detail -->
+            <div class="lg:col-span-2 space-y-6">
+                <!-- Crypto Dashboard -->
+                <div class="bg-white rounded-xl shadow-lg p-6">
+                    <h2 class="text-xl font-bold text-gray-800 mb-4 flex items-center gap-2">
+                        💰 Top Cryptocurrencies
+                        <button onclick="refreshDashboard()" class="ml-auto text-sm text-walmart-blue hover:underline">
+                            ↻ Refresh
+                        </button>
+                    </h2>
+                    <div id="dashboard" 
+                         hx-get="/dashboard" 
+                         hx-trigger="load"
+                         hx-indicator=".htmx-indicator">
+                        <div class="animate-pulse-fast text-gray-400">Loading cryptocurrencies...</div>
+                    </div>
+                </div>
+
+                <!-- Detail Panel -->
+                <div id="detail-panel" class="bg-white rounded-xl shadow-lg p-6 hidden">
+                    <div id="crypto-detail">
+                        <!-- Filled by HTMX -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-gray-800 text-white py-6 mt-12">
+        <div class="container mx-auto px-4 text-center">
+            <p class="text-gray-400">🐕 Crypto Trading Bot | Built for educational purposes</p>
+            <p class="text-sm text-gray-500 mt-2">Data powered by CoinGecko API | Not financial advice</p>
+        </div>
+    </footer>
+
+    <script>
+        // Show loading state immediately when request starts
+        document.body.addEventListener('htmx:beforeRequest', function(evt) {
+            if (evt.detail.target && evt.detail.target.id === 'crypto-detail') {
+                // Destroy existing Chart.js instances to prevent "Canvas is already in use" errors
+                if (typeof Chart !== 'undefined') {
+                    for (let id in Chart.instances) {
+                        Chart.instances[id].destroy();
+                    }
+                }
+
+                const panel = document.getElementById('detail-panel');
+                panel.classList.remove('hidden');
+                document.getElementById('crypto-detail').innerHTML = '<div class="flex flex-col items-center justify-center py-12 space-y-4"><div class="animate-spin h-10 w-10 text-walmart-blue"><svg fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg></div><p class="text-gray-500 font-medium">Fetching AI Analysis & Chart Data... 🐕</p></div>';
+                panel.scrollIntoView({ behavior: 'smooth' });
+            }
+
+            // Add typing indicator for chat while waiting for response
+            if (evt.detail.elt && evt.detail.elt.getAttribute('hx-post') === '/chat') {
+                const chatMessages = document.getElementById('chat-messages');
+                const existing = document.getElementById('chat-typing-indicator');
+                if (existing) existing.remove();
+
+                const typingIndicator = document.createElement('div');
+                typingIndicator.id = 'chat-typing-indicator';
+                typingIndicator.className = 'bg-walmart-blue text-white p-3 rounded-lg rounded-bl-none max-w-[85%] mt-3 opacity-75';
+                typingIndicator.innerHTML = '🐕 Typing<span class="animate-pulse inline-block">...</span>';
+                chatMessages.appendChild(typingIndicator);
+                chatMessages.scrollTop = chatMessages.scrollHeight;
+            }
+        });
+
+        // Remove typing indicator before new message arrives
+        document.body.addEventListener('htmx:beforeSwap', function(evt) {
+            if (evt.detail.target.id === 'chat-messages') {
+                const indicator = document.getElementById('chat-typing-indicator');
+                if (indicator) indicator.remove();
+            }
+        });
+
+        // Show detail panel when crypto is clicked
+        document.body.addEventListener('htmx:afterSwap', function(evt) {
+            if (evt.detail.target.id === 'search-results' && evt.detail.target.innerHTML.trim()) {
+                evt.detail.target.classList.remove('hidden');
+            }
+            
+            // Chatbot Typewriter Effect
+            if (evt.detail.target.id === 'chat-messages') {
+                const container = evt.detail.target;
+                const botMessages = container.querySelectorAll('.bot-typing-target');
+                const newBotMessage = botMessages[botMessages.length - 1]; 
+                
+                if (newBotMessage) {
+                    const fullHTML = newBotMessage.innerHTML;
+                    newBotMessage.innerHTML = '';
+                    let i = 0;
+                    
+                    function typeWriter() {
+                        if (i < fullHTML.length) {
+                            let char = fullHTML.charAt(i);
+                            let nextHtml = char;
+                            
+                            // Process HTML tags and entities instantly so they don't break
+                            if (char === '<') {
+                                let tag = char;
+                                i++;
+                                while (i < fullHTML.length && fullHTML.charAt(i) !== '>') {
+                                    tag += fullHTML.charAt(i);
+                                    i++;
+                                }
+                                if (i < fullHTML.length) tag += '>';
+                                nextHtml = tag;
+                            } else if (char === '&') {
+                                let entity = char;
+                                i++;
+                                while (i < fullHTML.length && fullHTML.charAt(i) !== ';') {
+                                    entity += fullHTML.charAt(i);
+                                    i++;
+                                }
+                                if (i < fullHTML.length) entity += ';';
+                                nextHtml = entity;
+                            }
+                            
+                            newBotMessage.innerHTML += nextHtml;
+                            i++;
+                            container.scrollTop = container.scrollHeight;
+                            
+                            // Random typing speed between 10ms and 30ms for natural feel
+                            setTimeout(typeWriter, Math.random() * 20 + 10);
+                        }
+                    }
+                    typeWriter();
+                }
+            }
+        });
+
+        // Hide search results when clicking outside
+        document.addEventListener('click', function(e) {
+            const searchResults = document.getElementById('search-results');
+            if (!e.target.closest('#search-results') && !e.target.closest('input[name="q"]')) {
+                searchResults.classList.add('hidden');
+            }
+        });
+
+        // Update risk tolerance preference
+        async function updateRiskTolerance(value) {
+            await fetch('/api/preferences', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ risk_tolerance: value })
+            });
+            // Refresh detail if visible
+            const detailContainer = document.getElementById('crypto-detail');
+            const childDiv = detailContainer.firstElementChild;
+            if (childDiv && childDiv.dataset.cryptoId) {
+                const cryptoId = childDiv.dataset.cryptoId;
+                htmx.ajax('GET', '/crypto/' + cryptoId, {target: '#crypto-detail'});
+            }
+        }
+
+        // Refresh dashboard
+        function refreshDashboard() {
+            htmx.trigger('#dashboard', 'load');
+        }
+
+        // Format large numbers
+        function formatNumber(num) {
+            if (num >= 1e12) return (num / 1e12).toFixed(2) + 'T';
+            if (num >= 1e9) return (num / 1e9).toFixed(2) + 'B';
+            if (num >= 1e6) return (num / 1e6).toFixed(2) + 'M';
+            if (num >= 1e3) return (num / 1e3).toFixed(2) + 'K';
+            return num.toFixed(2);
+        }
+    </script>
+</body>
+</html>

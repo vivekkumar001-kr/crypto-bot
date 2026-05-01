@@ -1,0 +1,26 @@
+<!-- Chat Response Partial -->
+<!-- User message -->
+<div class="flex justify-end">
+    <div class="bg-gray-200 text-gray-800 p-3 rounded-lg rounded-br-none max-w-[85%]">
+        {{ user_message }}
+    </div>
+</div>
+
+<!-- Bot response -->
+<div class="flex justify-start">
+    <div class="bot-typing-target p-3 rounded-lg rounded-bl-none max-w-[85%]
+        {% if response.is_crypto_related %}
+            bg-walmart-blue text-white
+        {% else %}
+            bg-red-100 text-red-800 border border-red-200
+        {% endif %}">
+        {{ response.response | safe }}
+    </div>
+</div>
+
+{% if not response.is_crypto_related %}
+<!-- Hint for non-crypto queries -->
+<div class="text-center text-xs text-gray-400 mt-2">
+    Try asking about Bitcoin, market trends, or trading strategies! 🐕
+</div>
+{% endif %}
